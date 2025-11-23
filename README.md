@@ -130,50 +130,51 @@ WebSocket data every second
 
 Gives a real-time view of network balancing.
 
+---
+
 # 🗂️ Folder Structure
 
----
+```txt
 WifiLoadBalancing/
 │
-├── frontend/ # 🌐 D3.js Live Visualization UI
-│ ├── index.html # → Main frontend page (Live Server)
-│ └── data/
-│ ├── aps.json # → Static AP layout for drawing
-│ ├── users.json # → Static user layout (initial positions)
-│ └── campus_layout.json # → Multi-floor campus map definition
+├── frontend/                       # 🌐 D3.js Live Visualization UI
+│   ├── index.html                  # → Main frontend page (Live Server)
+│   └── data/
+│       ├── aps.json                # → Static AP layout for drawing
+│       ├── users.json              # → Static user layout (initial positions)
+│       └── campus_layout.json      # → Multi-floor campus map definition
 │
 ├── src/
-│ ├── main.py # ⚡ FastAPI backend + WebSocket broadcaster
-│ ├── run_simulation.py # 🎯 Offline algorithm test runner
+│   ├── main.py                     # ⚡ FastAPI backend + WebSocket broadcaster
+│   ├── run_simulation.py           # 🎯 Offline algorithm test runner
 │
-│ ├── simulation/ # 🧠 Core simulation engine
-│ │ ├── simulator.py # → Movement + RSSI + AP load + greedy
-│ │ ├── movement_generator.py # → Random walk user movement
-│ │ ├── environment_config.py # → Simulation constants
-│ │ ├── metrics.py # → Load/fairness metrics
-│ │ └── generate_initial_data.py # → Generates realistic AP/user dataset
+│   ├── simulation/                 # 🧠 Core simulation engine
+│   │   ├── simulator.py            # → Movement + RSSI + AP load + greedy
+│   │   ├── movement_generator.py   # → Random walk user movement
+│   │   ├── environment_config.py   # → Simulation constants
+│   │   ├── metrics.py              # → Load/fairness metrics
+│   │   └── generate_initial_data.py# → Generates realistic AP/user dataset
 │
-│ ├── algorithms/ # 🧮 Algorithm implementations
-│ │ ├── graph_model.py # → Builds bipartite graph for MCMF
-│ │ ├── mcmf.py # → Reva’s Min-Cost-Max-Flow
-│ │ ├── cost_function.py # → Combined cost scoring
-│ │ ├── greedy_redistribution.py # → Meet’s smart greedy balancing
-│ │ └── priority_queue.py # → Stable PQ for greedy
+│   ├── algorithms/                 # 🧮 Algorithm implementations
+│   │   ├── graph_model.py          # → Builds bipartite graph for MCMF
+│   │   ├── mcmf.py                 # → Reva’s Min-Cost-Max-Flow
+│   │   ├── cost_function.py        # → Combined cost scoring
+│   │   ├── greedy_redistribution.py# → Meet’s smart greedy balancing
+│   │   └── priority_queue.py       # → Stable PQ for greedy
 │
-│ └── utils/ # 🧰 Helper utilities
-│ ├── file_loader.py # → Loads dataset files
-│ ├── random_data_generator.py # → Creates synthetic distributions
-│ └── visualization.py # → Debug visualization (optional)
+│   └── utils/                      # 🧰 Helper utilities
+│       ├── file_loader.py          # → Loads dataset files
+│       ├── random_data_generator.py# → Creates synthetic distributions
+│       └── visualization.py        # → Debug visualization (optional)
 │
-├── data/ # 📦 Initial backend input
-│ ├── aps.json # → AP positions + load
-│ ├── users.json # → User initial positions + RSSI
-│ └── config.json # → Global AP/user settings
+├── data/                           # 📦 Initial backend input
+│   ├── aps.json                    # → AP positions + load
+│   ├── users.json                  # → User initial positions + RSSI
+│   └── config.json                 # → Global AP/user settings
 │
-├── results/ # 📊 Saved simulation outputs
+├── results/                        # 📊 Saved simulation outputs
 │
-└── README.md # 📘 Documentation
----
+└── README.md                       # 📘 Documentation
 
 🧪 How to Run the Project
 ✔ Backend (FastAPI WebSocket)
