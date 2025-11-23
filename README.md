@@ -132,6 +132,7 @@ Gives a real-time view of network balancing.
 
 # 🗂️ Folder Structure
 
+---
 WifiLoadBalancing/
 │
 ├── frontend/ # 🌐 D3.js Live Visualization UI
@@ -172,7 +173,7 @@ WifiLoadBalancing/
 ├── results/ # 📊 Saved simulation outputs
 │
 └── README.md # 📘 Documentation
-
+---
 
 🧪 How to Run the Project
 ✔ Backend (FastAPI WebSocket)
