@@ -3,18 +3,17 @@ import heapq
 class UserPriorityQueue:
     def __init__(self):
         self.heap = []
+        self.counter = 0  # tie-breaker to avoid comparing dicts
 
     def push(self, user, priority):
-        """
-        user: dict with user info
-        priority: lower number => higher priority
-        """
-        heapq.heappush(self.heap, (priority, user))
+        # lower priority number = higher removal priority
+        entry = (priority, self.counter, user)
+        heapq.heappush(self.heap, entry)
+        self.counter += 1
 
     def pop(self):
-        """Return the highest priority user"""
         if self.heap:
-            return heapq.heappop(self.heap)[1]
+            return heapq.heappop(self.heap)[2]
         return None
 
     def __len__(self):
@@ -22,3 +21,4 @@ class UserPriorityQueue:
 
     def clear(self):
         self.heap = []
+        self.counter = 0
