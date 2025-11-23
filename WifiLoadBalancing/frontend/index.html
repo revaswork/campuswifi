@@ -12,42 +12,68 @@
 
     <style>
         body {
-            background: #0b0b0b;
-            color: white;
             margin: 0;
             overflow: hidden;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(148,163,184,0.35) 0%, rgba(15,23,42,0.8) 40%, #020617 100%),
+                url("./assets/bg.png") center/cover fixed no-repeat;
+            background-blend-mode: soft-light;
+            color: white;
         }
 
         svg {
-            background: #121212;
+            background: rgba(3,7,18,0.9);
             display: block;
         }
 
+        /* Heavy glass + inner glow */
+        .glass-panel {
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.20);
+            box-shadow:
+                0 20px 40px rgba(0,0,0,0.7),
+                inset 0 0 0 0.5px rgba(255,255,255,0.12);
+            border-radius: 18px;
+        }
+
+        .glass-soft {
+            backdrop-filter: blur(18px) saturate(180%);
+            -webkit-backdrop-filter: blur(18px) saturate(180%);
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            box-shadow: 0 18px 35px rgba(0,0,0,0.6);
+            border-radius: 16px;
+        }
+
         .room-rect {
-            stroke: #333;
-            fill: #101010;
-            rx: 8;
-            ry: 8;
+            stroke: rgba(148,163,184,0.25);
+            fill: rgba(15,23,42,0.85);
+            rx: 10;
+            ry: 10;
         }
 
         .user {
-            fill: cyan;
+            fill: #22d3ee;
             transition: 0.25s;
         }
         .user:hover {
             r: 7 !important;
+            filter: drop-shadow(0 0 6px #22d3ee);
         }
 
         .ap-glow {
-            filter: drop-shadow(0 0 8px #ff3b3b);
+            filter: drop-shadow(0 0 10px #fb7185);
         }
 
         .tooltip {
             position: absolute;
-            background: rgba(0,0,0,0.7);
+            background: rgba(15,23,42,0.94);
             padding: 8px 10px;
-            border: 1px solid #333;
-            border-radius: 6px;
+            border: 1px solid rgba(148,163,184,0.5);
+            border-radius: 8px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.15s;
@@ -57,57 +83,140 @@
         .user-line {
             pointer-events: none;
         }
+
+        @keyframes apPulse {
+            0%   { opacity: 0.18; }
+            50%  { opacity: 0.35; }
+            100% { opacity: 0.18; }
+        }
+
+        .ap-range {
+            animation: apPulse 4s ease-in-out infinite;
+        }
+
+        /* Neon animated floor border */
+        @keyframes neonBorder {
+            0%   { stroke-dashoffset: 0; opacity: 0.35; }
+            50%  { stroke-dashoffset: -40; opacity: 0.9; }
+            100% { stroke-dashoffset: -80; opacity: 0.35; }
+        }
+
+        .floor-neon {
+            fill: none;
+            stroke: #a855f7;
+            stroke-width: 2;
+            stroke-linejoin: round;
+            stroke-dasharray: 10 8;
+            filter: drop-shadow(0 0 12px #a855f7);
+            animation: neonBorder 3.2s linear infinite;
+        }
+
+        .user-trail {
+            pointer-events: none;
+        }
+
+        .floor-card {
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+        .floor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 30px rgba(0,0,0,0.65);
+            border-color: rgba(248, 250, 252, 0.5);
+            background: radial-gradient(circle at top left, rgba(148,163,184,0.20), rgba(15,23,42,0.8));
+        }
+
+        /* Heatmap overlay rects */
+        .room-heat {
+            pointer-events: none;
+        }
     </style>
 </head>
 
 <body class="select-none">
 
 <!-- Header -->
-<header class="w-full text-center py-4 bg-gray-900 shadow-lg text-xl font-semibold tracking-wide">
-    WiFi Load Balancing — Live Multi-Floor Visualization
+<header class="glass-panel w-full text-center py-4 text-xl font-semibold tracking-wide">
+    Campus WiFi Load Balancing — Live Multi-Floor Visualization
 </header>
 
-<!-- Canvas -->
-<div id="canvas" class="w-full h-[calc(100vh-64px)] overflow-auto flex justify-center">
-    <!-- svg will be injected here -->
+<!-- Canvas scroll area -->
+<div id="canvas" class="w-full h-[calc(100vh-64px)] overflow-auto">
+    <!-- svg injected by D3 -->
 </div>
+
 <div id="tooltip" class="tooltip"></div>
 
-<!-- Left Dashboard -->
-<div id="sidebar" class="fixed left-4 top-24 bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl rounded-xl p-4 w-64 text-sm hidden"></div>
+<!-- Left Floor Dashboard (with mini-map-style cards) -->
+<div id="sidebar"
+     class="glass-panel fixed left-4 top-24 p-4 w-72 text-sm hidden z-20">
+</div>
 
-<!-- Legend -->
-<div class="fixed right-4 top-24 bg-white/10 backdrop-blur-xl border border-white/20 text-sm shadow-xl rounded-xl p-4">
+<!-- Bottom-Left Stats Panel -->
+<div id="stats-panel"
+     class="glass-panel fixed left-4 bottom-6 p-4 w-80 text-xs hidden z-20">
+    <!-- filled from JS -->
+</div>
+
+<!-- Legend + Heatmap toggle -->
+<div class="glass-panel fixed right-4 top-24 text-sm p-4 z-20 w-72">
     <b class="text-lg">Legend</b><br><br>
-    <div class="flex items-center gap-2 mb-1">
-        <span class="w-3 h-3 rounded-full bg-green-400"></span>
-        <span>AP: Low load (0–40%)</span>
+    <div class="space-y-1">
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            <span>AP: Low load (0–40%)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+            <span>AP: Medium load (40–70%)</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+            <span class="w-3 h-3 rounded-full bg-red-500"></span>
+            <span>AP: High load (70–100%)</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+            <span class="w-3 h-3 rounded-full bg-cyan-300"></span>
+            <span>Users</span>
+        </div>
     </div>
-    <div class="flex items-center gap-2 mb-1">
-        <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
-        <span>AP: Medium load (40–70%)</span>
+
+    <hr class="border-slate-600/50 my-3">
+
+    <div class="text-xs mb-2 font-semibold">User Density Heatmap</div>
+    <div class="flex items-center gap-2 mb-2">
+        <div class="flex-1 h-2 rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-500"></div>
+        <span class="text-[10px] text-slate-300">low → high</span>
     </div>
-    <div class="flex items-center gap-2 mb-3">
-        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-        <span>AP: High load (70–100%)</span>
-    </div>
-    <div class="flex items-center gap-2 mt-1">
-        <span class="w-3 h-3 rounded-full bg-cyan-300"></span>
-        <span>Users</span>
-    </div>
-    <p class="mt-3 text-gray-300 text-xs">AP circle size also scales with load.</p>
+    <p class="text-[11px] text-slate-300 mb-3">
+        Rooms with more users glow from green to red when heatmap is enabled.
+    </p>
+
+    <button id="heatmap-btn"
+            onclick="toggleHeatmap()"
+            class="glass-soft w-full py-2 text-xs flex items-center justify-between px-3 hover:bg-white/5">
+        <span>Heatmap</span>
+        <span id="heatmap-state" class="text-emerald-400 font-semibold">OFF</span>
+    </button>
 </div>
 
 <!-- Zoom Controls -->
-<div class="fixed bottom-6 right-6 flex gap-3">
-    <button onclick="zoomIn()" class="px-4 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20">+</button>
-    <button onclick="zoomOut()" class="px-4 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20">−</button>
+<div class="fixed bottom-6 right-6 flex gap-3 z-20">
+    <button onclick="zoomIn()" class="glass-panel px-4 py-2 rounded-lg text-lg hover:bg-white/10">+</button>
+    <button onclick="zoomOut()" class="glass-panel px-4 py-2 rounded-lg text-lg hover:bg-white/10">−</button>
 </div>
 
 <script>
 let LAYOUT = null;
 let svg, svgGroup, tooltip;
 let zoom;
+let userTrails = {}; // id -> [{x,y}, ...]
+let lastState = null;
+let heatmapEnabled = false;
+
+const MAX_TRAIL_POINTS = 5;
+const AP_RANGE_DEFAULT = 100;
+
+// floor level -> yTop in SVG coords
+const floorYByLevel = {};
 
 async function loadLayout() {
     LAYOUT = await fetch('./data/campus_layout.json').then(r => r.json());
@@ -121,11 +230,26 @@ function initSVG() {
         .append("svg")
         .attr("viewBox", `0 0 ${width + 40} ${totalHeight}`)
         .attr("preserveAspectRatio", "xMidYMin meet")
-        .classed("w-full", true)
-        .classed("max-w-[1200px]", true);
+        .classed("w-full", true);
 
     svgGroup = svg.append("g");
     tooltip = d3.select("#tooltip");
+
+    // Gradient for AP coverage circles
+    const defs = svg.append("defs");
+    const radial = defs.append("radialGradient")
+        .attr("id", "apRangeGradient")
+        .attr("cx", "50%")
+        .attr("cy", "50%")
+        .attr("r", "50%");
+    radial.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#22c55e")
+        .attr("stop-opacity", 0.45);
+    radial.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#22c55e")
+        .attr("stop-opacity", 0);
 
     zoom = d3.zoom()
         .scaleExtent([0.4, 3])
@@ -134,84 +258,285 @@ function initSVG() {
     svg.call(zoom);
 }
 
+/* Neutral rooms with a tiny color accent */
+function getRoomAccentColor(name) {
+    const n = name.toLowerCase();
+    if (n.includes("library")) return "#38bdf8";      // blue
+    if (n.includes("lab")) return "#a855f7";          // purple
+    if (n.includes("canteen")) return "#fb923c";      // orange
+    if (n.includes("class")) return "#e5e7eb";        // soft light
+    if (n.includes("success")) return "#22c55e";      // green
+    return "#9ca3af";                                 // neutral grey
+}
+
 function drawStaticLayout() {
-    const floors = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
+    const floorsSorted = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
     const { margin, floorHeight, width } = LAYOUT.canvas;
 
-    floors.forEach((floor, idx) => {
+    floorsSorted.forEach((floor, idx) => {
         const top = margin + idx * (floorHeight + margin);
+        floorYByLevel[floor.level] = top;  // record for scroll
 
+        // Floor main panel
         svgGroup.append("rect")
             .attr("class", "floor-box")
             .attr("x", margin)
             .attr("y", top)
             .attr("width", width - margin * 2)
             .attr("height", floorHeight)
-            .attr("fill", "#0f0f0f")
-            .attr("stroke", "#222");
+            .attr("fill", "rgba(15,23,42,0.96)")
+            .attr("stroke", "rgba(148,163,184,0.35)")
+            .attr("rx", 18);
 
+        // Neon border overlay
+        svgGroup.append("rect")
+            .attr("class", "floor-neon")
+            .attr("x", margin + 4)
+            .attr("y", top + 4)
+            .attr("width", width - margin * 2 - 8)
+            .attr("height", floorHeight - 8)
+            .attr("rx", 20);
+
+        // Floor label
         svgGroup.append("text")
-            .attr("x", margin + 12)
-            .attr("y", top + 20)
-            .attr("fill", "white")
+            .attr("x", margin + 16)
+            .attr("y", top + 26)
+            .attr("fill", "#e5e7eb")
             .attr("font-size", 14)
+            .attr("font-weight", "600")
             .text(`Level ${floor.level} — ${floor.name}`);
 
+        // Rooms
         floor.rooms?.forEach(room => {
             const x = room.x + margin;
             const y = top + room.y;
 
+            // Room base rect
             svgGroup.append("rect")
                 .attr("class", "room-rect")
                 .attr("x", x)
                 .attr("y", y)
                 .attr("width", room.width)
                 .attr("height", room.height)
-                .attr("opacity", 0.55);
+                .attr("opacity", 0.9);
 
+            // Subtle accent bar
+            const accentColor = getRoomAccentColor(room.name);
+            svgGroup.append("rect")
+                .attr("x", x + 6)
+                .attr("y", y + 6)
+                .attr("width", 6)
+                .attr("height", 22)
+                .attr("fill", accentColor)
+                .attr("opacity", 0.95);
+
+            // Room label
             svgGroup.append("text")
-                .attr("x", x + 8)
-                .attr("y", y + 16)
-                .attr("fill", "#ddd")
+                .attr("x", x + 18)
+                .attr("y", y + 22)
+                .attr("fill", "#e5e7eb")
                 .attr("font-size", 12)
                 .text(room.name);
+
+            // Heatmap overlay rect (starts invisible)
+            svgGroup.append("rect")
+                .attr("class", "room-heat")
+                .attr("data-floor", floor.level)
+                .attr("data-room", room.name)
+                .attr("x", x)
+                .attr("y", y)
+                .attr("width", room.width)
+                .attr("height", room.height)
+                .attr("fill", "#22c55e")
+                .attr("opacity", 0);
         });
     });
 }
 
 function toGlobal(floorLevel, room, lx, ly) {
-    const floors = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
-    const index = floors.findIndex(f => f.level === floorLevel);
-
+    const floorsSorted = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
+    const index = floorsSorted.findIndex(f => f.level === floorLevel);
     const top = LAYOUT.canvas.margin + index * (LAYOUT.canvas.floorHeight + LAYOUT.canvas.margin);
     return { x: room.x + LAYOUT.canvas.margin + lx, y: top + room.y + ly };
 }
 
+function apColor(load) {
+    const t = (load || 0) / 100;
+    if (t < 0.4) return "#22c55e";   // green
+    if (t < 0.7) return "#eab308";   // yellow
+    return "#ef4444";                // red
+}
+
+function densityColor(t) {
+    // t in [0,1]
+    if (t <= 0.0) return "#22c55e";
+    if (t < 0.5) return "#4ade80";   // light green
+    if (t < 0.8) return "#eab308";   // yellow
+    return "#ef4444";                // red
+}
+
+function updateStatsPanel(aps, users) {
+    const stats = document.getElementById("stats-panel");
+    stats.classList.remove("hidden");
+
+    const totalUsers = users.length;
+    const totalAps = aps.length;
+    const overloaded = aps.filter(ap => ap.load > 80).length;
+    const avgLoad = aps.length
+        ? (aps.reduce((sum, ap) => sum + (ap.load || 0), 0) / aps.length).toFixed(1)
+        : 0;
+
+    stats.innerHTML = `
+        <div class="text-[0.8rem] space-y-2">
+            <div class="flex items-center justify-between">
+                <div class="font-semibold text-sm">Live Network Snapshot</div>
+                <span class="text-[10px] text-slate-300">~1s refresh</span>
+            </div>
+
+            <div class="flex justify-between">
+                <span>Total Users</span>
+                <span class="text-cyan-300 font-semibold">${totalUsers}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Total APs</span>
+                <span class="text-emerald-300 font-semibold">${totalAps}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Overloaded APs (&gt;80%)</span>
+                <span class="text-red-400 font-semibold">${overloaded}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Average AP Load</span>
+                <span class="text-yellow-300 font-semibold">${avgLoad}%</span>
+            </div>
+        </div>
+    `;
+}
+
+function scrollToFloor(level) {
+    const container = document.getElementById("canvas");
+    const y = floorYByLevel[level];
+    if (y === undefined) return;
+
+    const offset = Math.max(0, y - 40); // small margin above
+    container.scrollTo({
+        top: offset,
+        behavior: "smooth"
+    });
+}
+
+function buildSidebar(aps, users) {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.classList.remove("hidden");
+    sidebar.innerHTML = `
+        <div class="mb-3 flex items-center justify-between">
+            <div class="text-sm font-semibold">Floors Overview</div>
+            <div class="text-[10px] text-slate-300">tap to jump</div>
+        </div>
+    `;
+
+    const floorsSorted = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
+
+    floorsSorted.forEach(floor => {
+        const count = users.filter(u => u.floor === floor.level).length;
+        const floorAps = aps.filter(ap => ap.floor === floor.level);
+        const avgFloorLoad = floorAps.length
+            ? (floorAps.reduce((s,a)=>s+(a.load||0),0)/floorAps.length).toFixed(0)
+            : 0;
+
+        let barColor = "#22c55e";
+        const t = avgFloorLoad / 100;
+        if (t >= 0.7) barColor = "#ef4444";
+        else if (t >= 0.4) barColor = "#eab308";
+
+        sidebar.innerHTML += `
+            <button
+                class="floor-card w-full mb-2 text-left px-3 py-2 glass-soft border border-slate-500/60 flex items-center justify-between"
+                data-floor="${floor.level}"
+            >
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-300">Level ${floor.level}</span>
+                        <span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        <span class="text-[11px] text-slate-200">${floor.name}</span>
+                    </div>
+                    <div class="mt-1 text-[11px] text-slate-300">
+                        Users: <span class="text-cyan-300 font-semibold">${count}</span>
+                    </div>
+                    <div class="mt-1 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div style="width: ${avgFloorLoad}%; background: ${barColor};"
+                             class="h-full rounded-full"></div>
+                    </div>
+                </div>
+                <div class="ml-2 text-slate-300 text-xs flex flex-col items-end gap-1">
+                    <span>${avgFloorLoad}%</span>
+                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-900/70 border border-slate-500/70 text-[10px]">
+                        ⤵
+                    </span>
+                </div>
+            </button>
+        `;
+    });
+
+    // Attach click handlers for scroll
+    sidebar.querySelectorAll("[data-floor]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const level = parseInt(btn.getAttribute("data-floor"), 10);
+            scrollToFloor(level);
+        });
+    });
+}
+
+function applyHeatmap(users) {
+    const heatRects = d3.selectAll(".room-heat");
+    if (!heatmapEnabled) {
+        heatRects.attr("opacity", 0);
+        return;
+    }
+
+    // Count users per (floor, room)
+    const counts = {};
+    users.forEach(u => {
+        if (!u.floor || !u.room) return;
+        const key = `${u.floor}||${u.room}`;
+        counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const values = Object.values(counts);
+    const maxCount = values.length ? Math.max(...values) : 1;
+
+    heatRects.each(function() {
+        const rect = d3.select(this);
+        const floor = rect.attr("data-floor");
+        const room = rect.attr("data-room");
+        const key = `${floor}||${room}`;
+        const c = counts[key] || 0;
+        const t = maxCount ? c / maxCount : 0;
+
+        if (c === 0) {
+            rect.attr("opacity", 0);
+        } else {
+            rect
+                .attr("fill", densityColor(t))
+                .attr("opacity", 0.18 + t * 0.35);
+        }
+    });
+}
+
 function redrawState(state) {
+    lastState = state;
+
     const aps = state.aps;
     const users = state.clients;
 
-    // ---- Sidebar (floor stats) ----
-    const sidebar = document.getElementById("sidebar");
-    sidebar.innerHTML = "";
-    sidebar.classList.remove("hidden");
-
-    const floors = [...LAYOUT.floors].sort((a, b) => b.level - a.level);
-    floors.forEach(floor => {
-        const count = users.filter(u => u.floor === floor.level).length;
-        sidebar.innerHTML += `
-            <div class="mb-3 p-2 bg-white/5 rounded-lg border border-white/10 shadow">
-                <b>Level ${floor.level}</b><br>
-                ${floor.name}<br>
-                Users: <span class="text-cyan-300">${count}</span>
-            </div>
-        `;
-    });
+    updateStatsPanel(aps, users);
+    buildSidebar(aps, users);
 
     // Clear dynamic layers
     svgGroup.selectAll(".ap-node").remove();
     svgGroup.selectAll(".user-node").remove();
     svgGroup.selectAll(".user-line").remove();
+    svgGroup.selectAll(".user-trail").remove();
 
     // ---- APs ----
     const apGroup = svgGroup.selectAll(".ap-node")
@@ -230,9 +555,32 @@ function redrawState(state) {
         })
         .attr("transform", d => `translate(${d._gx},${d._gy})`);
 
+    // AP coverage range
     apGroup.append("circle")
-        .attr("r", d => 10 + (d.load / 100) * 20)
-        .attr("fill", d => d3.interpolateRdYlGn(1 - d.load / 100))
+        .attr("class", "ap-range")
+        .attr("r", d => d.coverage_radius || AP_RANGE_DEFAULT)
+        .attr("fill", "url(#apRangeGradient)")
+        .attr("opacity", 0.22);
+
+    // AP load gauge arc
+    const arcGenerator = d3.arc()
+        .innerRadius(22)
+        .outerRadius(26)
+        .startAngle(0);
+
+    apGroup.append("path")
+        .attr("d", d =>
+            arcGenerator.endAngle(
+                (Math.max(0, Math.min(d.load || 0, 100)) / 100) * 2 * Math.PI
+            )()
+        )
+        .attr("fill", d => apColor(d.load))
+        .attr("opacity", 0.9);
+
+    // AP core
+    apGroup.append("circle")
+        .attr("r", d => 10 + (d.load / 100) * 14)
+        .attr("fill", d => apColor(d.load))
         .attr("class", d => d.load > 80 ? "ap-glow" : "")
         .on("mouseover", (event, d) => {
             tooltip
@@ -252,26 +600,62 @@ function redrawState(state) {
     apGroup.append("text")
         .attr("y", -25)
         .attr("text-anchor", "middle")
-        .attr("fill", "white")
+        .attr("fill", "#e5e7eb")
+        .attr("font-size", 11)
         .text(d => d.id);
 
-    // ---- Users ----
-    const userCircles = svgGroup.selectAll(".user-node")
-        .data(users)
+    // ---- Users & trails ----
+    users.forEach(u => {
+        if (!userTrails[u.id]) userTrails[u.id] = [];
+    });
+
+    const positionedUsers = users.map(d => {
+        const floor = LAYOUT.floors.find(f => f.level === d.floor);
+        if (!floor) return d;
+        const room = floor.rooms.find(r => r.name.toLowerCase() === d.room.toLowerCase());
+        if (!room) return d;
+        const pos = toGlobal(d.floor, room, d.x % room.width, d.y % room.height);
+        d._gx = pos.x;
+        d._gy = pos.y;
+
+        const trail = userTrails[d.id] || [];
+        trail.push({ x: d._gx, y: d._gy });
+        if (trail.length > MAX_TRAIL_POINTS) trail.shift();
+        userTrails[d.id] = trail;
+
+        return d;
+    });
+
+    const trailData = [];
+    Object.entries(userTrails).forEach(([id, points]) => {
+        points.forEach((p, idx) => {
+            trailData.push({
+                id,
+                x: p.x,
+                y: p.y,
+                age: idx,
+                len: points.length
+            });
+        });
+    });
+
+    svgGroup.selectAll(".user-trail")
+        .data(trailData)
+        .enter()
+        .append("circle")
+        .attr("class", "user-trail")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", d => 2 + (d.age / d.len) * 2)
+        .attr("fill", "#22d3ee")
+        .attr("opacity", d => 0.12 + (d.age / d.len) * 0.28);
+
+    svgGroup.selectAll(".user-node")
+        .data(positionedUsers)
         .enter()
         .append("circle")
         .attr("class", "user user-node")
         .attr("r", 4)
-        .each(function(d) {
-            const floor = LAYOUT.floors.find(f => f.level === d.floor);
-            if (!floor) return;
-            const room = floor.rooms.find(r => r.name.toLowerCase() === d.room.toLowerCase());
-            if (!room) return;
-            const pos = toGlobal(d.floor, room, d.x % room.width, d.y % room.height);
-            d._gx = pos.x;
-            d._gy = pos.y;
-        })
-        // set initial position to avoid (0,0) jump
         .attr("cx", d => d._gx)
         .attr("cy", d => d._gy)
         .on("mouseover", (event, d) => {
@@ -289,13 +673,13 @@ function redrawState(state) {
         })
         .on("mouseout", () => tooltip.style("opacity", 0));
 
-    // ---- User ↔ AP Lines ----
+    // User ↔ AP lines
     svgGroup.selectAll(".user-line")
-        .data(users.filter(u => u.connected_ap))
+        .data(positionedUsers.filter(u => u.connected_ap))
         .enter()
         .append("line")
         .attr("class", "user-line")
-        .attr("stroke", "#666")
+        .attr("stroke", "#64748b")
         .attr("stroke-width", 1)
         .attr("opacity", 0.35)
         .attr("x1", d => d._gx)
@@ -308,6 +692,22 @@ function redrawState(state) {
             const ap = aps.find(a => a.id === d.connected_ap);
             return ap ? ap._gy : d._gy;
         });
+
+    // Apply / update heatmap overlay on rooms
+    applyHeatmap(users);
+}
+
+function toggleHeatmap() {
+    heatmapEnabled = !heatmapEnabled;
+    const stateSpan = document.getElementById("heatmap-state");
+    stateSpan.textContent = heatmapEnabled ? "ON" : "OFF";
+    stateSpan.className = heatmapEnabled
+        ? "text-emerald-400 font-semibold"
+        : "text-slate-400 font-semibold";
+
+    if (lastState) {
+        applyHeatmap(lastState.clients);
+    }
 }
 
 function startWebSocket() {
